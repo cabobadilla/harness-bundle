@@ -1,0 +1,1 @@
+- **evaluator** (ligero) — QA escéptico que revisa código + tests, sin browser

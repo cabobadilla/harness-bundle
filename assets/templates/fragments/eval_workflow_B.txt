@@ -1,0 +1,2 @@
+4. `/evaluate`         → revisión ligera de código/output contra el spec (sin browser)
+5. `/ship`             → verificación + commit convencional

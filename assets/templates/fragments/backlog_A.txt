@@ -1,0 +1,2 @@
+- [ ] **Evaluator ligero** — agrégalo cuando el generator solo no baste (re-corre init eligiendo "B")
+- [ ] **Evaluator completo (Playwright)** — para apps con UI. Nivel C, aún no en el init; se agrega manualmente (ver guía).

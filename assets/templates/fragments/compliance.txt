@@ -1,0 +1,9 @@
+
+## Compliance
+- Normativa aplicable: <COMPLETAR — PCI DSS, SOX, normativa local>
+- Auditoría: todos los cambios requieren ticket + ADR
+- Datos sensibles: nunca valores reales en logs ni tests
+
+## Sistemas regulados
+- Solo lecturas vía MCP read-only, escrituras vía backend con confirmación humana
+- El evaluator (si aplica) navega SOLO staging con datos sintéticos, nunca producción

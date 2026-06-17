@@ -1,0 +1,16 @@
+{
+  "_comment": "EJEMPLO DE REFERENCIA — no se carga. Copia las entradas que necesites a .mcp.json (sin las claves _comment).",
+  "mcpServers": {
+    "_comment_filesystem": "filesystem da a Claude acceso a una carpeta FUERA del proyecto (ej: un vault de notas, assets compartidos, otro repo). NO es necesario para los archivos del propio proyecto: Claude ya los lee/escribe de forma nativa.",
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/ruta/absoluta/a/carpeta-externa"]
+    },
+    "_comment_otro": "Puedes agregar cualquier otro MCP siguiendo el mismo patrón (command + args + env).",
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": { "DATABASE_URL": "${DATABASE_URL}" }
+    }
+  }
+}

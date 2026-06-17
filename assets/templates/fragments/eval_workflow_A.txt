@@ -1,0 +1,2 @@
+4. `/ship`             → verificación + commit convencional
+   (Evaluator no instalado — arquitectura MVP. Agrega Nivel B cuando una tarea lo amerite.)

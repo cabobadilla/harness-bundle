@@ -1,0 +1,37 @@
+# Harness — {{PROJECT_NAME}} (v2, Opus 4.5+)
+
+Inicializado con `init-harness.sh` (bundle {{BUNDLE_VERSION}}). Arquitectura: **{{ARCH}}**.
+
+## Agentes
+- **planner** — expande prompt corto a spec en memory/specs/
+- **generator** — implementa el spec feature por feature
+{{EVAL_AGENT_LINE}}
+
+## Comandos
+- `/plan <objetivo>` — invoca planner, decide stack y persiste el spec
+- `/configure-stack` — copia skill-packs del stack a `.claude/skills/` (idempotente)
+- `/build` — invoca generator sobre el spec más reciente
+{{EVAL_CMD_LINE}}
+- `/freeze <path>` / `/unfreeze` — restringe/libera scope de edición
+- `/ship` — verificación + conventional commit
+
+## Filosofía
+Optimizado para Opus 4.5+. Sin context resets, sin sprints obligatorios.
+Escala la verificación según la necesidad real:
+  A (solo generator) → B (evaluador ligero) → C (evaluador + Playwright, backlog).
+Sube de nivel solo cuando una tarea concreta te muestre que el nivel actual
+no basta. No al revés.
+
+## Backlog / mejoras pendientes
+{{BACKLOG_EVAL}}
+- [ ] Revisar `.mcp.json.example` si necesitas acceso a carpetas externas (MCP filesystem)
+- [ ] Completar los `<COMPLETAR>` en CLAUDE.md
+- [ ] Afinar el prompt del evaluator con casos reales (ver guía)
+
+## Próximos pasos
+1. Completa los `<COMPLETAR>` en CLAUDE.md
+2. `cp .env.example .env` y completa credenciales
+3. Abre Claude Code: `claude`
+4. Prueba: `/plan "una app de notas con tags"`
+
+Documentación completa: AGENT_HARNESS_GUIDE_V2.md

@@ -1,0 +1,75 @@
+# Proyecto: {{PROJECT_NAME}}
+
+## Modelo objetivo
+Optimizado para **Opus 4.5 o superior**.
+NO implementar context resets ni decomposición en sprints por defecto:
+los modelos actuales manejan tareas largas nativamente.
+
+## Misión
+{{MISSION}}
+
+## Stack
+<COMPLETAR — el planner lo decide en el primer `/plan` (alto nivel) y lo afina `/configure-stack` después>
+
+## Arquitectura sintética
+- Módulos principales: <COMPLETAR — el planner los define>
+- Detalle en `@docs/architecture.md`
+
+## Workflow de agentes
+1. `/plan <objetivo>`    → planner expande a spec en memory/specs/, decide el STACK alto nivel y actualiza CLAUDE.md + docs/architecture.md
+2. `/configure-stack`    → analiza el spec, copia skill-packs del stack desde el bundle a `.claude/skills/` (idempotente)
+3. `/build`              → generator implementa el spec
+{{EVAL_WORKFLOW}}
+
+## Mantenimiento de documentación (importante)
+Estos documentos deben mantenerse SIEMPRE al día — no son decorativos:
+- **docs/architecture.md** — el planner lo actualiza tras cada /plan que cambie la arquitectura. El generator lo ajusta si durante el build cambia algo estructural.
+- **CLAUDE.md** (este archivo) — se actualiza cuando cambia el stack, la misión o las convenciones. El planner puede editarlo; tú lo revisas.
+- **memory/decisions.md** — bitácora append-only de decisiones arquitectónicas.
+Si terminas un /plan o /build y estos docs quedaron desactualizados respecto a lo construido, actualízalos antes de cerrar.
+
+## Política de evaluación
+- Tareas simples/medias → confiar en el generator (Nivel A).
+- Apps con UI, entregables a cliente, lógica con edge cases → invocar /evaluate (Nivel B, evaluador ligero).
+- Regla: el evaluator vale el costo cuando la tarea está más allá de lo que el modelo hace confiablemente solo.
+
+## Convenciones no negociables
+- Conventional commits
+- Tests obligatorios para lógica de negocio
+- No introducir dependencias nuevas sin justificación en ADR
+- Patrones prohibidos: <COMPLETAR según stack>
+
+## Skills — política y descubrimiento
+
+Los skills viven en `.claude/skills/` (copia local del proyecto, versionada).
+**La lista NO es fija** — crece con `/configure-stack` o cuando agregás packs manualmente.
+
+### Cómo se aplican (regla general)
+- Cada `SKILL.md` declara en su frontmatter un `description` que indica CUÁNDO usarlo.
+- Los subagentes (planner, generator, evaluator) NO tienen herramienta `Skill`. **Descubren skills dinámicamente**: listan `.claude/skills/`, leen los frontmatter, y aplican el que matchee con su paso actual leyendo el SKILL.md completo.
+- Los `/commands` corren en contexto principal y SÍ pueden usar `Skill` directamente.
+
+### Skills universales (siempre presentes, copiados por `init-harness`)
+
+| Skill | Trigger típico (según su frontmatter) |
+|---|---|
+| `test-driven-development` | Antes de implementar lógica no trivial. |
+| `systematic-debugging` | Cuando aparece un bug, test rojo o "no funciona". |
+| `verification-before-completion` | Antes de declarar "listo / hecho / fixed". Gate obligatorio de `/ship`. |
+
+### Skills agregados después (vía `/configure-stack` o manualmente)
+Cualquier `SKILL.md` que aparezca en `.claude/skills/` es candidato. El generator
+lo descubre al inicio de su trabajo. No hace falta editar este archivo ni el
+prompt del generator — el patrón es "agregar archivo, queda activo".
+
+Para ver la lista actual: `ls .claude/skills/`.
+{{COMPLIANCE_SECTION}}
+
+## Política de plugins externos
+NO usar automáticamente plugins de comunidad (superpowers, ralph-loop, gstack, etc.).
+El workflow se define SOLO por los agentes y commands en `.claude/`.
+Si una tarea pareciera beneficiarse de un plugin externo, PREGUNTAR antes de invocarlo.
+
+## Referencias persistentes
+- @memory/decisions.md
+- @docs/architecture.md

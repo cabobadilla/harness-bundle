@@ -1,0 +1,2 @@
+- [x] Evaluator ligero (sin browser) — ACTIVO
+- [ ] **Upgrade a Evaluator completo (Playwright)** — cuando tengas UI que validar a fondo. El nivel C aún no está en el init; por ahora se agrega a mano: declara Playwright MCP en .mcp.json y reemplaza .claude/agents/evaluator.md por la versión con browser (ver guía).
