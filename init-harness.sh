@@ -13,10 +13,12 @@
 #   ./init-harness.sh ./mi-proyecto        # interactivo en el directorio dado
 #   ./init-harness.sh --non-interactive ./mi-proyecto
 #       # No-interactivo. Lee defaults de env vars:
-#       #   HARNESS_PROJECT_NAME, HARNESS_MISSION, HARNESS_PROJECT_TYPE
-#       #   HARNESS_ARCH (A|B), HARNESS_GIT (yes|no), HARNESS_DEPLOY (none|cloudflare|railway|vercel|manual)
-#       #   HARNESS_MCP_GITHUB (yes|no), HARNESS_MCP_POSTGRES (yes|no)
+#       #   HARNESS_PROJECT_NAME, HARNESS_MISSION
+#       #   HARNESS_PROJECT_TYPE (Estándar|Regulado)
+#       #   HARNESS_ARCH (A|B), HARNESS_GIT (yes|no)
+#       #   HARNESS_DEPLOY (none|cloudflare|railway|vercel)
 #       #   HARNESS_HOOK_ON_STOP / PRE_BASH / USER_PROMPT_VALIDATOR / POST_EDIT_FORMAT / SESSION_START / SUBAGENT_STOP
+#       # MCPs se instalan en /config-stack, no acá.
 #
 # Requiere: la carpeta assets/ junto a este script.
 # Idempotente: omite archivos que ya existen.
@@ -89,24 +91,28 @@ ask() {
 }
 
 ask_choice() {
-  local prompt="$1"; shift
+  local prompt="$1"; local default="$2"; shift 2
   local options=("$@"); local count=${#options[@]}
-  if [[ "$NON_INTERACTIVE" == "yes" ]]; then echo "${options[0]}"; return; fi
+  local default_idx=0 i
+  for i in "${!options[@]}"; do
+    [[ "${options[$i]}" == "$default" ]] && { default_idx=$i; break; }
+  done
+  if [[ "$NON_INTERACTIVE" == "yes" ]]; then echo "${options[$default_idx]}"; return; fi
   echo "  $prompt" >&2
-  local i=1
-  for opt in "${options[@]}"; do echo "    $i) $opt" >&2; ((i++)); done
-  local choice idx
-  read -r -p "  Elige [1]: " choice; choice="${choice:-1}"
+  i=1
+  for opt in "${options[@]}"; do echo "    $i) $opt" >&2; i=$((i+1)); done
+  local default_num=$((default_idx + 1)) choice idx
+  read -r -p "  Elige [$default_num]: " choice; choice="${choice:-$default_num}"
   if [[ "$choice" =~ ^[0-9]+$ ]]; then
     idx=$((choice - 1))
   else
     local first; first=$(printf '%s' "$choice" | head -c1 | tr '[:lower:]' '[:upper:]')
     case "$first" in
       [A-Z]) idx=$(( $(printf '%d' "'$first") - 65 )) ;;
-      *) idx=0 ;;
+      *) idx=$default_idx ;;
     esac
   fi
-  (( idx < 0 || idx >= count )) && idx=0
+  (( idx < 0 || idx >= count )) && idx=$default_idx
   echo "${options[$idx]}"
 }
 
@@ -201,10 +207,15 @@ fi
 PROJECT_NAME=$(ask "Nombre del proyecto" "${HARNESS_PROJECT_NAME:-$(basename "$TARGET_ABS")}")
 MISSION=$(ask "Misión (1-2 frases — qué hace, para quién)" "${HARNESS_MISSION:-<COMPLETAR>}")
 
+PROJECT_TYPE_DEFAULT="${HARNESS_PROJECT_TYPE:-Estándar}"
+case "$PROJECT_TYPE_DEFAULT" in
+  Regulado*|regulado*) PROJECT_TYPE_DEFAULT_LBL="Regulado (compliance)" ;;
+  *)                   PROJECT_TYPE_DEFAULT_LBL="Estándar" ;;
+esac
 PROJECT_TYPE=$(ask_choice "Tipo de proyecto:" \
-  "${HARNESS_PROJECT_TYPE:-Personal}" \
-  "Cliente enterprise (estándar)" \
-  "Cliente regulado (banca/salud/gov)")
+  "$PROJECT_TYPE_DEFAULT_LBL" \
+  "Estándar" \
+  "Regulado (compliance)")
 
 # ─── Arquitectura ──────────────────────────────────────────────────────────
 title "🤖  Arquitectura de agentes"
@@ -235,12 +246,11 @@ fi
 # ─── Deploy target ─────────────────────────────────────────────────────────
 title "🚀  Deployment target"
 if [[ "$NON_INTERACTIVE" != "yes" ]]; then
-  echo "  Define dónde se va a desplegar el proyecto. Habilita MCP correspondiente." >&2
+  echo "  Define dónde se va a desplegar el proyecto. El MCP correspondiente lo instala /config-stack." >&2
   echo "  • none       — no deploy (decidir después)" >&2
-  echo "  • cloudflare — Workers/Pages (MCP local oficial)" >&2
-  echo "  • railway    — Railway (MCP remoto https://mcp.railway.com)" >&2
-  echo "  • vercel     — Vercel (MCP remoto https://mcp.vercel.com)" >&2
-  echo "  • manual     — checklist de deploy manual, sin MCP" >&2
+  echo "  • cloudflare — Workers/Pages" >&2
+  echo "  • railway    — Railway" >&2
+  echo "  • vercel     — Vercel" >&2
 fi
 DEPLOY_DEFAULT="${HARNESS_DEPLOY:-none}"
 DEPLOY_TARGET=$(ask_choice "Deploy target:" \
@@ -248,23 +258,17 @@ DEPLOY_TARGET=$(ask_choice "Deploy target:" \
   "none" \
   "cloudflare" \
   "railway" \
-  "vercel" \
-  "manual")
+  "vercel")
 
 # ─── MCPs ──────────────────────────────────────────────────────────────────
-title "🔌  MCPs (además del de deploy)"
-MCP_GITHUB=$(env_yn HARNESS_MCP_GITHUB "no")
-MCP_POSTGRES=$(env_yn HARNESS_MCP_POSTGRES "no")
-if [[ "$NON_INTERACTIVE" != "yes" ]]; then
-  ask_yn "¿Habilitar MCP github?" "n" && MCP_GITHUB="yes" || MCP_GITHUB="no"
-  ask_yn "¿Habilitar MCP postgres?" "n" && MCP_POSTGRES="yes" || MCP_POSTGRES="no"
-fi
+# Los MCPs (github, postgres, deploy target) se instalan por /config-stack
+# basándose en el stack confirmado + deploy target. El init solo crea
+# .mcp.json vacío para que claude no falle al arrancar.
 
-# ─── Hooks (selector por hook) ─────────────────────────────────────────────
-title "🛡  Hooks (selecciona cuáles instalar)"
-if [[ "$NON_INTERACTIVE" != "yes" ]]; then
-  echo "  Eventos disponibles. Defaults marcados con [Y/n]." >&2
-fi
+# ─── Hooks ─────────────────────────────────────────────────────────────────
+# Defaults (on-stop, pre-bash, user-prompt-validator) se instalan siempre.
+# Los no-default se preguntan individualmente.
+title "🛡  Hooks"
 HOOK_ON_STOP=$(env_yn HARNESS_HOOK_ON_STOP "yes")
 HOOK_PRE_BASH=$(env_yn HARNESS_HOOK_PRE_BASH "yes")
 HOOK_USER_PROMPT_VALIDATOR=$(env_yn HARNESS_HOOK_USER_PROMPT_VALIDATOR "yes")
@@ -273,9 +277,8 @@ HOOK_SESSION_START=$(env_yn HARNESS_HOOK_SESSION_START "no")
 HOOK_SUBAGENT_STOP=$(env_yn HARNESS_HOOK_SUBAGENT_STOP "no")
 
 if [[ "$NON_INTERACTIVE" != "yes" ]]; then
-  ask_yn "on-stop (persiste resumen de sesión)" "y" && HOOK_ON_STOP="yes" || HOOK_ON_STOP="no"
-  ask_yn "pre-bash (bloquea comandos peligrosos)" "y" && HOOK_PRE_BASH="yes" || HOOK_PRE_BASH="no"
-  ask_yn "user-prompt-validator (filtra secretos en prompts)" "y" && HOOK_USER_PROMPT_VALIDATOR="yes" || HOOK_USER_PROMPT_VALIDATOR="no"
+  echo "  Defaults instalados automáticamente: on-stop, pre-bash, user-prompt-validator." >&2
+  echo "  Preguntas para hooks opcionales:" >&2
   ask_yn "post-edit-format (auto-formato tras Edit/Write)" "n" && HOOK_POST_EDIT_FORMAT="yes" || HOOK_POST_EDIT_FORMAT="no"
   ask_yn "session-start (resumen al abrir sesión)" "n" && HOOK_SESSION_START="yes" || HOOK_SESSION_START="no"
   ask_yn "subagent-stop (log de subagentes)" "n" && HOOK_SUBAGENT_STOP="yes" || HOOK_SUBAGENT_STOP="no"
@@ -295,8 +298,7 @@ echo "  Arquitectura:       $ARCH"
 echo "  Evaluator:          $([ "$WANT_EVALUATOR" == "yes" ] && echo "ligero" || echo "no")"
 echo "  Git init:           $WANT_GIT"
 echo "  Deploy target:      $DEPLOY_TARGET"
-echo "  MCP github:         $MCP_GITHUB"
-echo "  MCP postgres:       $MCP_POSTGRES"
+echo "  MCPs:               (se instalan en /config-stack según stack + deploy)"
 echo "  Hooks:"
 echo "    on-stop:                  $HOOK_ON_STOP"
 echo "    pre-bash:                 $HOOK_PRE_BASH"
@@ -332,62 +334,19 @@ if [[ "$WANT_EVALUATOR" == "yes" ]]; then
 else
   inject_block "CLAUDE.md" "EVAL_WORKFLOW" "$(fragment eval_workflow_A.txt)"
 fi
-if [[ "$PROJECT_TYPE" == "Cliente regulado (banca/salud/gov)" ]]; then
+if [[ "$PROJECT_TYPE" == "Regulado (compliance)" ]]; then
   inject_block "CLAUDE.md" "COMPLIANCE_SECTION" "$(fragment compliance.txt)"
 else
   inject_block "CLAUDE.md" "COMPLIANCE_SECTION" ""
 fi
 
 # ─── .mcp.json ─────────────────────────────────────────────────────────────
-title "🔌  Generando .mcp.json"
-MCP_ENTRIES=()
-[[ "$MCP_GITHUB" == "yes" ]] && MCP_ENTRIES+=('"github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}" }
-    }')
-[[ "$MCP_POSTGRES" == "yes" ]] && MCP_ENTRIES+=('"postgres": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-postgres"],
-      "env": { "DATABASE_URL": "${DATABASE_URL}" }
-    }')
-
-case "$DEPLOY_TARGET" in
-  cloudflare)
-    MCP_ENTRIES+=('"cloudflare-bindings": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://bindings.mcp.cloudflare.com/sse"]
-    }')
-    ;;
-  railway)
-    MCP_ENTRIES+=('"railway": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.railway.com"]
-    }')
-    ;;
-  vercel)
-    MCP_ENTRIES+=('"vercel": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.vercel.com"]
-    }')
-    ;;
-esac
-
+title "🔌  Generando .mcp.json (vacío — /config-stack lo popula)"
 if [[ -e .mcp.json ]]; then
   warn ".mcp.json ya existe — se omite (preserva customizaciones)"
 else
-  if [[ ${#MCP_ENTRIES[@]} -eq 0 ]]; then
-    printf '{\n  "mcpServers": {}\n}\n' > .mcp.json
-  else
-    { echo "{"; echo '  "mcpServers": {'
-      for i in "${!MCP_ENTRIES[@]}"; do
-        printf '    %s' "${MCP_ENTRIES[$i]}"
-        [[ $i -lt $((${#MCP_ENTRIES[@]} - 1)) ]] && echo "," || echo ""
-      done
-      echo "  }"; echo "}"
-    } > .mcp.json
-  fi
-  ok "Creado .mcp.json"
+  printf '{\n  "mcpServers": {}\n}\n' > .mcp.json
+  ok "Creado .mcp.json (vacío)"
 fi
 
 # ─── settings.json (permisos + hooks) ──────────────────────────────────────
@@ -426,7 +385,7 @@ if [[ "$WANT_GIT" == "yes" ]]; then
 fi
 
 EXTRA_DENY=""
-if [[ "$PROJECT_TYPE" == "Cliente regulado (banca/salud/gov)" ]]; then
+if [[ "$PROJECT_TYPE" == "Regulado (compliance)" ]]; then
   EXTRA_DENY=',
       "Read(./customer/**)",
       "Read(./payments/**)",

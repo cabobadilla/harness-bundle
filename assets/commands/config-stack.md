@@ -1,8 +1,8 @@
 ---
-description: Reta y confirma el stack con el usuario (tabla comparativa), luego copia skill-packs aplicables.
+description: Reta y confirma el stack con el usuario (tabla comparativa), copia skill-packs aplicables, e instala los MCPs necesarios.
 ---
 
-Tu objetivo es **confirmar el stack con el usuario antes de cementarlo** y recién después copiar skill-packs. Nunca asumas — siempre presenta la tabla, espera respuesta del usuario, y solo entonces actúas.
+Tu objetivo es **confirmar el stack con el usuario antes de cementarlo**, luego copiar skill-packs **y declarar los MCPs apropiados en `.mcp.json`**. Nunca asumas — siempre presenta la tabla, espera respuesta del usuario, y solo entonces actúas.
 
 ## Token economy
 - Antes de leer todo: `ls memory/specs/` y `grep -i "stack\|deploy" CLAUDE.md` para ubicarte.
