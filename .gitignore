@@ -1,0 +1,33 @@
+# Secretos
+.env
+.env.local
+.env.*.local
+
+# macOS / editor junk
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Scratch / test sandbox
+/1/
+/tmp-*/
+/harness-test-*/
+
+# Local Claude config (no compartir)
+.claude/settings.local.json
+
+# Instaladores globales (locales — no se distribuyen via repo)
+/install-global.sh
+/uninstall-global.sh
+
+# Build artifacts comunes
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+dist/
+build/
