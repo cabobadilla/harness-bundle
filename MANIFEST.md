@@ -1,85 +1,113 @@
 # MANIFEST — Harness Bundle
 
-**Bundle version:** `1f`
+**Bundle version:** `1g`
 **Generado:** 2026-06-17
 
 La shell (`init-harness.sh`) contiene la LÓGICA. Los `assets/` contienen el CONTENIDO estático.
 Editar un asset no requiere tocar la shell. Tras editar, actualiza su checksum con:
 `shasum -a 256 <archivo> | cut -c1-12`
 
-## Cambios v1e → v1f
-- **Eliminada la pregunta STACK** del init-harness. STACK queda como `<COMPLETAR>` en CLAUDE.md hasta que el planner lo defina en `/plan`. Alinea la shell con §7.1 de la estrategia (planner decide stack alto nivel).
-- **MISSION enriquecido**: ahora pide 1-2 frases con instrucciones explícitas ("qué hace, para quién"). El foco se desplaza de configurar stack a articular bien el objetivo (mejor contexto para el planner).
-- **Nuevo comando `/configure-stack`** (`assets/commands/configure-stack.md`): copiado a todo proyecto. Detecta el stack del spec, busca skill-packs en bundle → global → reporta missing con 3 opciones (skip/stub/abort).
-- **Nueva librería `assets/skill-packs/`** (vacía a propósito). README explica estructura, cuándo agregar packs, y cómo `/configure-stack` los usa.
-- **Workflow renumerado**: `1.plan → 2.configure-stack → 3.build → 4.evaluate (B) → 4|5.ship`. Fragments `eval_workflow_{A,B}.txt` actualizados.
-- **`planner.md`** actualizado: ahora actualiza explícitamente la sección Stack de CLAUDE.md y cierra recomendando `/configure-stack`.
-- **`HARNESS.md.tmpl`** lista el nuevo comando.
-- **Skill discovery dinámico en el generator**: el prompt ya NO hardcodea los 3 skills universales como paths fijos. El generator lista `.claude/skills/`, lee los frontmatter, y aplica el skill que matchee con su paso actual. Los packs que `/configure-stack` agrega quedan automáticamente activos sin tocar prompts.
-- **`CLAUDE.md.tmpl` "Skills"** reformulado de tabla fija a política + lista universal de referencia. La verdad operativa es `.claude/skills/` (el contenido del directorio).
-- **Eliminado `assets/scaffolds/` (Flask scaffold)** y la pregunta "Tipo de solución". Contradice la decisión de v1f (stack lo decide el planner, no el shell). El usuario que quiera Flask lo obtiene vía `/plan "web simple con formulario"` → planner elige Flask → `/build` lo genera. Quitamos 5 archivos + la rama `WANT_FLASK` del init.
+## Cambios v1f → v1g
 
-## Cambios v1d → v1e
-- Fix: `inject_block` ahora usa archivo temporal + `getline` (compatible con BSD awk en macOS).
-- Fix: `render_asset`/`copy_asset` retornan 0 en "ya existe" → idempotencia real.
-- Fix: `.mcp.json` y `.claude/settings.json` respetan idempotencia (no se sobreescriben).
-- Cambio: skills se copian SIEMPRE al proyecto (pregunta eliminada). Son referenciados por path desde agents/commands.
-- Wiring: `CLAUDE.md.tmpl` declara mapeo fase→skill. `commands/ship.md` invoca `verification-before-completion` como paso 0. `commands/build.md` sugiere TDD. `agents/generator.md` lee SKILL.md por path en cada fase.
-- Nuevo: `check-skills.sh` (script independiente, audita `~/.claude/` contra §12 de la estrategia).
-- Nuevo: `install-global.sh` / `uninstall-global.sh` — exponen `check-skills` y `init-harness` como comandos globales vía symlinks (no copias), idempotentes, no destructivos en colisiones. Soportan `--only` para instalar uno solo.
-- Fix: `init-harness.sh` ahora resuelve symlinks para encontrar `assets/` cuando se invoca como `init-harness` desde PATH (loop manual porque BSD readlink en macOS no tiene `-f`).
+### Commands
+- **Eliminados** `freeze.md` y `unfreeze.md` (junto al hook `freeze-guard.sh`).
+- **Renombrado** `configure-stack.md` → `config-stack.md`, rediseñado como **challenger del stack**: presenta tabla comparativa (opción/complejidad/pros/contras/encaje con deploy), reta al usuario antes de cementar, persiste decisión en `CLAUDE.md` + `memory/decisions.md`, recién después copia skill-packs.
+- **`/build`** ahora declara explícitamente que lee `memory/spec/<slug>.md` Y `memory/backlog.md` (los ítems abiertos del backlog son input además del spec).
+- **`/evaluate`** documenta el loop completo: evaluator escribe findings P0/P1/P2 a `memory/backlog.md` (append), `/build` los resuelve en la siguiente iteración.
+- **`/ship`** rediseñado con 7 pasos: verification gate → lint → tests → secret-scan → diff → commit → **deploy según `DEPLOY_TARGET`** (wrangler/railway/vercel/manual/none) → push opcional.
+
+### Hooks
+- **Eliminado:** `freeze-guard.sh` (sin `/freeze`).
+- **Nuevo selector por hook** en `init-harness.sh` (reemplaza el toggle global). Defaults:
+  - `on-stop.sh` (Stop) — ON
+  - `pre-bash.sh` (PreToolUse:Bash) — ON
+  - `user-prompt-validator.sh` (UserPromptSubmit) — **ON** (filtro de secretos: AWS, GitHub, Anthropic, OpenAI, PEM, Slack)
+  - `post-edit-format.sh` (PostToolUse:Edit|Write) — OFF (auto-formato silencioso si hay formatter)
+  - `session-start.sh` (SessionStart) — OFF (imprime branch, spec activo, backlog pendiente)
+  - `subagent-stop.sh` (SubagentStop) — OFF (log de subagentes en `memory/sessions/subagents.log`)
+
+### Init shell
+- **`--non-interactive` / `-y`**: usa env vars `HARNESS_*` como defaults. Habilita los tests E2E.
+- **Git opcional**: pregunta primero (default `n`). Si NO → omite todos los permisos `Bash(git *)` del `settings.json` y salta `git init`.
+- **Deploy target**: nueva pregunta (`none` / `cloudflare` / `railway` / `vercel` / `manual`). Default `none`.
+  - `cloudflare` → agrega `cloudflare-bindings` MCP al `.mcp.json` (`mcp-remote` a `https://bindings.mcp.cloudflare.com/sse`).
+  - `railway`    → agrega Railway MCP (`mcp-remote` a `https://mcp.railway.com`).
+  - `vercel`     → agrega Vercel MCP (`mcp-remote` a `https://mcp.vercel.com`).
+  - `manual` / `none` → sin MCP de deploy.
+- `settings.json.allow` ahora incluye permisos para `python -m venv` y `source .venv/bin/activate`.
+
+### Agentes
+- **Token economy** explícito en planner/generator/evaluator: Grep/Glob antes de Read, frontmatter primero, confirmar con el usuario antes de bulk reads (>5 archivos o >2000 líneas) o WebSearch.
+- **Planner**: paso explícito "Confirm deployment strategy" antes de escribir el spec; escribe sección `## Deployment` en CLAUDE.md; agrega requisitos responsive/`.venv` al spec según el stack.
+- **Generator**: lee `memory/backlog.md` además del spec; marca ítems resueltos `- [x]`; convenciones `.venv` (Python) y responsive (web) explícitas.
+- **Evaluator-light**: persiste findings en `memory/backlog.md` con prioridades P0/P1/P2 (formato accionable que `/build` consume); valida convenciones del repo (.venv, responsive); activa `.venv` antes de `pytest`.
+
+### Templates
+- **`CLAUDE.md.tmpl`**: nueva sección `## Deployment` con `{{DEPLOY_TARGET}}`. Convenciones `.venv` (Python) y responsive (web) explícitas.
+- **`HARNESS.md.tmpl`**: lista los 5 commands finales, muestra `DEPLOY_TARGET` en encabezado, diagrama de flujo `/plan → /config-stack → /build ↔ /evaluate → /ship`.
+- **Nuevo `backlog.md.tmpl`**: archivo `memory/backlog.md` que se genera al inicializar; sección "TODO manual" + área donde `/evaluate` appendea findings.
+- **Fragments** `eval_workflow_A/B.txt` actualizados para reflejar paso de deploy en `/ship`.
+
+### Tests E2E
+- **`tests/e2e-scaffold.sh`**: smoke estructural del scaffolder. Verifica creación de archivos, ausencia de los no-seleccionados, validez del JSON, idempotencia (2ª corrida), y variante git=yes. No requiere API key.
+- **`tests/e2e-claude.sh`**: invoca Claude Code headless (`claude -p`) sobre el dir scaffoldeado para `/plan` + `/build` y valida que se generó código real. Requiere `ANTHROPIC_API_KEY`. Costo ~$0.10-0.30 por corrida.
 
 ## Estructura
 ```
 harness-bundle/
-├── init-harness.sh       ← LÓGICA del scaffolder
+├── init-harness.sh       ← LÓGICA del scaffolder (con --non-interactive)
 ├── check-skills.sh       ← Pre/post-flight: auditoría de ~/.claude/
-├── install-global.sh     ← Expone check-skills + init-harness como symlinks globales
-├── uninstall-global.sh   ← Revierte la instalación global
-├── VERSION               ← versión del bundle
+├── install-global.sh     ← Symlinks check-skills + init-harness en PATH
+├── uninstall-global.sh   ← Revierte instalación global
+├── VERSION               ← versión del bundle (1g)
 ├── MANIFEST.md           ← este archivo
 ├── CLAUDE.md             ← reglas de trabajo sobre este repo
 ├── USER_GUIDE.md         ← guía paso a paso
 ├── harness_strategy.md   ← estrategia (fuente de verdad)
-└── assets/               ← CONTENIDO editable sin tocar la shell
-    ├── agents/           prompts de planner, generator, evaluator
-    ├── commands/         slash commands (plan, configure-stack, build, ship, ...)
-    ├── hooks/            pre-bash, on-stop, freeze-guard
-    ├── skills/           3 skills universales (siempre copiados al proyecto)
-    ├── skill-packs/      librería de packs por stack (vacía al inicio, crece con uso)
-    └── templates/        CLAUDE.md, HARNESS.md, etc. + fragments/
+├── tests/                ← E2E tests (scaffold + claude headless)
+└── assets/
+    ├── agents/           planner, generator, evaluator-light
+    ├── commands/         plan, config-stack, build, evaluate, ship  (5)
+    ├── hooks/            on-stop, pre-bash, user-prompt-validator, post-edit-format, session-start, subagent-stop
+    ├── skills/           3 universales (siempre copiados)
+    ├── skill-packs/      librería de packs por stack (vacía al inicio)
+    └── templates/        CLAUDE.md, HARNESS.md, backlog.md, etc. + fragments/
 ```
 
 ## Archivos y checksums
 
 | Archivo | Tipo | Checksum (sha256, 12) |
 |---|---|---|
-| init-harness.sh | lógica | `345b41e3bb0e` |
+| init-harness.sh | lógica | `18a10b50d016` |
 | check-skills.sh | lógica | `166998bb283f` |
 | install-global.sh | instalador | `626a481c99de` |
 | uninstall-global.sh | instalador | `ed19768a1bf1` |
-| VERSION | meta | `71063fefaab7` |
-| assets/agents/evaluator-light.md | agente | `c8aebeb9a70b` |
-| assets/agents/generator.md | agente | `9517cae202c7` |
-| assets/agents/planner.md | agente | `c3d70425b2f3` |
-| assets/commands/build.md | command | `5d423986de41` |
-| assets/commands/configure-stack.md | command | `2777e876330e` |
-| assets/commands/evaluate.md | command | `b60685ff95e3` |
-| assets/commands/freeze.md | command | `fed1c2eee0d5` |
+| VERSION | meta | `be191d20627f` |
+| tests/e2e-scaffold.sh | test | `c2100975ce7b` |
+| tests/e2e-claude.sh | test | `8ca0daec01bf` |
+| assets/agents/evaluator-light.md | agente | `a89d9af2db37` |
+| assets/agents/generator.md | agente | `7c76e287ae4a` |
+| assets/agents/planner.md | agente | `c104e4886529` |
+| assets/commands/build.md | command | `f684df3a8ce4` |
+| assets/commands/config-stack.md | command | `722329a9e6eb` |
+| assets/commands/evaluate.md | command | `d5c664b537aa` |
 | assets/commands/plan.md | command | `8adfef7af077` |
-| assets/commands/ship.md | command | `0b446ae12aaa` |
-| assets/commands/unfreeze.md | command | `0cdc11176617` |
-| assets/hooks/freeze-guard.sh | hook | `383027521333` |
+| assets/commands/ship.md | command | `24905b0e39b9` |
 | assets/hooks/on-stop.sh | hook | `6e9b36b5eb6d` |
 | assets/hooks/pre-bash.sh | hook | `a551e12576fb` |
+| assets/hooks/user-prompt-validator.sh | hook | `c1b9e8d5bbb7` |
+| assets/hooks/post-edit-format.sh | hook | `5e9df629b2ac` |
+| assets/hooks/session-start.sh | hook | `8cd1424205af` |
+| assets/hooks/subagent-stop.sh | hook | `08ec5b911a68` |
 | assets/skill-packs/README.md | doc | `e52a3656dea1` |
 | assets/skills/systematic-debugging/SKILL.md | skill | `d85aaea15f86` |
 | assets/skills/test-driven-development/SKILL.md | skill | `375b8b3556ab` |
 | assets/skills/verification-before-completion/SKILL.md | skill | `7e8c7cd39999` |
-| assets/templates/CLAUDE.md.tmpl | template | `61d83cd741ba` |
-| assets/templates/HARNESS.md.tmpl | template | `cd4414c690be` |
+| assets/templates/CLAUDE.md.tmpl | template | `eef38d91ca80` |
+| assets/templates/HARNESS.md.tmpl | template | `2f2ade8e774e` |
 | assets/templates/adr-template.md.tmpl | template | `67f733003f15` |
 | assets/templates/architecture.md.tmpl | template | `59ced5d04fff` |
+| assets/templates/backlog.md.tmpl | template | `3dc84c8b60c2` |
 | assets/templates/decisions.md.tmpl | template | `1019d5790337` |
 | assets/templates/env.example.tmpl | template | `d3092e18fcfa` |
 | assets/templates/fragments/backlog_A.txt | fragmento | `740fa0b674eb` |
@@ -87,7 +115,7 @@ harness-bundle/
 | assets/templates/fragments/compliance.txt | fragmento | `239799525c75` |
 | assets/templates/fragments/eval_agent_line_B.txt | fragmento | `39d97bf49155` |
 | assets/templates/fragments/eval_cmd_line_B.txt | fragmento | `780b8abcf2bc` |
-| assets/templates/fragments/eval_workflow_A.txt | fragmento | `ca4dcf6b177a` |
-| assets/templates/fragments/eval_workflow_B.txt | fragmento | `84244962c9a0` |
+| assets/templates/fragments/eval_workflow_A.txt | fragmento | `e9afefcab969` |
+| assets/templates/fragments/eval_workflow_B.txt | fragmento | `4df493769bd2` |
 | assets/templates/gitignore.tmpl | template | `0d32e330e244` |
 | assets/templates/mcp.json.example.tmpl | template | `452e9e4cd41a` |

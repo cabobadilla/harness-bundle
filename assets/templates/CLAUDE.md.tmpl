@@ -9,40 +9,63 @@ los modelos actuales manejan tareas largas nativamente.
 {{MISSION}}
 
 ## Stack
-<COMPLETAR — el planner lo decide en el primer `/plan` (alto nivel) y lo afina `/configure-stack` después>
+<COMPLETAR — el planner lo decide en `/plan` (alto nivel); `/config-stack` lo reta y confirma>
+
+## Deployment
+**Target:** `{{DEPLOY_TARGET}}`
+
+Si el target es `cloudflare`, `railway` o `vercel`, el MCP correspondiente ya está declarado en `.mcp.json`.
+Si es `none` o `manual`, el deploy lo decide el usuario más adelante.
+`/plan` debe re-confirmar este target al inicio de cada spec, y `/ship` lo respeta en su paso de deploy.
 
 ## Arquitectura sintética
 - Módulos principales: <COMPLETAR — el planner los define>
 - Detalle en `@docs/architecture.md`
 
 ## Workflow de agentes
-1. `/plan <objetivo>`    → planner expande a spec en memory/specs/, decide el STACK alto nivel y actualiza CLAUDE.md + docs/architecture.md
-2. `/configure-stack`    → analiza el spec, copia skill-packs del stack desde el bundle a `.claude/skills/` (idempotente)
-3. `/build`              → generator implementa el spec
+1. `/plan <objetivo>`    → planner expande a spec en `memory/specs/`, decide stack alto nivel, confirma deploy target, actualiza CLAUDE.md + `docs/architecture.md`
+2. `/config-stack`       → reta y confirma el stack con el usuario (tabla comparativa), copia skill-packs aplicables a `.claude/skills/`
+3. `/build`              → generator implementa el spec + resuelve `memory/backlog.md`
 {{EVAL_WORKFLOW}}
 
 ## Mantenimiento de documentación (importante)
 Estos documentos deben mantenerse SIEMPRE al día — no son decorativos:
-- **docs/architecture.md** — el planner lo actualiza tras cada /plan que cambie la arquitectura. El generator lo ajusta si durante el build cambia algo estructural.
-- **CLAUDE.md** (este archivo) — se actualiza cuando cambia el stack, la misión o las convenciones. El planner puede editarlo; tú lo revisas.
+- **docs/architecture.md** — el planner lo actualiza tras cada `/plan` que cambie la arquitectura. El generator lo ajusta si durante el build cambia algo estructural.
+- **CLAUDE.md** (este archivo) — se actualiza cuando cambia el stack, la misión, deploy target, o las convenciones.
 - **memory/decisions.md** — bitácora append-only de decisiones arquitectónicas.
-Si terminas un /plan o /build y estos docs quedaron desactualizados respecto a lo construido, actualízalos antes de cerrar.
+- **memory/backlog.md** — TODOs accionables (especialmente alimentado por `/evaluate`).
+Si terminás un `/plan` o `/build` y estos docs quedaron desactualizados respecto a lo construido, actualizalos antes de cerrar.
 
 ## Política de evaluación
 - Tareas simples/medias → confiar en el generator (Nivel A).
-- Apps con UI, entregables a cliente, lógica con edge cases → invocar /evaluate (Nivel B, evaluador ligero).
+- Apps con UI, entregables a cliente, lógica con edge cases → invocar `/evaluate` (Nivel B, evaluador ligero).
+- El evaluator escribe findings en `memory/backlog.md` que el próximo `/build` resuelve.
 - Regla: el evaluator vale el costo cuando la tarea está más allá de lo que el modelo hace confiablemente solo.
 
 ## Convenciones no negociables
-- Conventional commits
-- Tests obligatorios para lógica de negocio
-- No introducir dependencias nuevas sin justificación en ADR
-- Patrones prohibidos: <COMPLETAR según stack>
+
+### Generales
+- **Conventional commits** (`feat:`, `fix:`, `chore:`, `docs:`, etc.).
+- **Tests obligatorios** para business logic (parsers, cálculos, edge cases).
+- **Sin dependencias nuevas sin justificación** (anotarlas en `memory/decisions.md`).
+- **Patrones prohibidos:** <COMPLETAR según stack>
+
+### Python (si aplica al stack)
+- Trabajar **siempre dentro de `.venv` local**. Crearlo si no existe:
+  `python -m venv .venv && source .venv/bin/activate`.
+- NUNCA `pip install` global ni con `sudo`.
+- Dependencias en `requirements.txt` o `pyproject.toml`, instalar con `pip install -r ...` dentro del venv activo.
+
+### UI web (si aplica al stack)
+- Layout **responsive obligatorio**: mobile-first, breakpoints estándar (`sm` / `md` / `lg` / `xl`).
+- Sin anchos fijos en `px` para containers principales (preferir `%`, `rem`, `vw`, `clamp()`, grid/flex).
+- Validar render ≤ 375px de ancho antes de declarar la UI lista.
+- El evaluator marca como finding cualquier violación con `file:line`.
 
 ## Skills — política y descubrimiento
 
 Los skills viven en `.claude/skills/` (copia local del proyecto, versionada).
-**La lista NO es fija** — crece con `/configure-stack` o cuando agregás packs manualmente.
+**La lista NO es fija** — crece con `/config-stack` o cuando agregás packs manualmente.
 
 ### Cómo se aplican (regla general)
 - Cada `SKILL.md` declara en su frontmatter un `description` que indica CUÁNDO usarlo.
@@ -57,7 +80,7 @@ Los skills viven en `.claude/skills/` (copia local del proyecto, versionada).
 | `systematic-debugging` | Cuando aparece un bug, test rojo o "no funciona". |
 | `verification-before-completion` | Antes de declarar "listo / hecho / fixed". Gate obligatorio de `/ship`. |
 
-### Skills agregados después (vía `/configure-stack` o manualmente)
+### Skills agregados después (vía `/config-stack` o manualmente)
 Cualquier `SKILL.md` que aparezca en `.claude/skills/` es candidato. El generator
 lo descubre al inicio de su trabajo. No hace falta editar este archivo ni el
 prompt del generator — el patrón es "agregar archivo, queda activo".
@@ -72,4 +95,5 @@ Si una tarea pareciera beneficiarse de un plugin externo, PREGUNTAR antes de inv
 
 ## Referencias persistentes
 - @memory/decisions.md
+- @memory/backlog.md
 - @docs/architecture.md

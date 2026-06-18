@@ -1,2 +1,2 @@
-4. `/evaluate`         → revisión ligera de código/output contra el spec (sin browser)
-5. `/ship`             → verificación + commit convencional
+4. `/evaluate`         → revisión ligera contra el spec; persiste findings P0/P1/P2 en `memory/backlog.md`
+5. `/ship`             → verification gate → tests → commit → deploy según target

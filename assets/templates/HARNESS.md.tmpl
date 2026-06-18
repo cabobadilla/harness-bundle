@@ -1,19 +1,26 @@
 # Harness — {{PROJECT_NAME}} (v2, Opus 4.5+)
 
-Inicializado con `init-harness.sh` (bundle {{BUNDLE_VERSION}}). Arquitectura: **{{ARCH}}**.
+Inicializado con `init-harness.sh` (bundle {{BUNDLE_VERSION}}).
+**Arquitectura:** {{ARCH}} · **Deploy target:** `{{DEPLOY_TARGET}}`
 
 ## Agentes
-- **planner** — expande prompt corto a spec en memory/specs/
-- **generator** — implementa el spec feature por feature
+- **planner** — expande prompt corto a spec en `memory/specs/`
+- **generator** — implementa el spec feature por feature, resuelve `memory/backlog.md`
 {{EVAL_AGENT_LINE}}
 
 ## Comandos
-- `/plan <objetivo>` — invoca planner, decide stack y persiste el spec
-- `/configure-stack` — copia skill-packs del stack a `.claude/skills/` (idempotente)
-- `/build` — invoca generator sobre el spec más reciente
+- `/plan <objetivo>` — invoca planner, decide stack, confirma deploy target, persiste el spec
+- `/config-stack` — reta/confirma el stack con tabla comparativa, copia skill-packs (idempotente)
+- `/build` — invoca generator sobre el spec más reciente + ítems abiertos del backlog
 {{EVAL_CMD_LINE}}
-- `/freeze <path>` / `/unfreeze` — restringe/libera scope de edición
-- `/ship` — verificación + conventional commit
+- `/ship` — verification gate → lint → tests → secret scan → commit → deploy (según target)
+
+## Flujo end-to-end
+```
+/plan → /config-stack → /build → (/evaluate) → /ship
+                          ↑          ↓
+                          └────  memory/backlog.md
+```
 
 ## Filosofía
 Optimizado para Opus 4.5+. Sin context resets, sin sprints obligatorios.
@@ -22,16 +29,19 @@ Escala la verificación según la necesidad real:
 Sube de nivel solo cuando una tarea concreta te muestre que el nivel actual
 no basta. No al revés.
 
+Token economy es ley en los agentes: Grep/Glob antes de Read, frontmatter
+antes de full read, confirmar con el usuario antes de bulk operations.
+
 ## Backlog / mejoras pendientes
 {{BACKLOG_EVAL}}
-- [ ] Revisar `.mcp.json.example` si necesitas acceso a carpetas externas (MCP filesystem)
+- [ ] Revisar `.mcp.json.example` si necesitás acceso a carpetas externas (MCP filesystem)
 - [ ] Completar los `<COMPLETAR>` en CLAUDE.md
 - [ ] Afinar el prompt del evaluator con casos reales (ver guía)
 
 ## Próximos pasos
-1. Completa los `<COMPLETAR>` en CLAUDE.md
-2. `cp .env.example .env` y completa credenciales
-3. Abre Claude Code: `claude`
-4. Prueba: `/plan "una app de notas con tags"`
+1. Completá los `<COMPLETAR>` en CLAUDE.md
+2. `cp .env.example .env` y completá credenciales
+3. Abrí Claude Code: `claude`
+4. Probá: `/plan "una app de notas con tags"`
 
 Documentación completa: AGENT_HARNESS_GUIDE_V2.md

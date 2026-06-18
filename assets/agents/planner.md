@@ -15,40 +15,74 @@ Principles (from Anthropic's harness research):
 - Constrain the deliverables, let the generator figure out the path.
 - Look for opportunities to weave in AI features where they add value.
 
-What you CAN write:
-- memory/specs/<slug>.md      (the spec — always)
-- docs/architecture.md        (update the architecture from the spec)
-- CLAUDE.md                   (update Stack / Misión / arquitectura sintética
-                               if the spec changes them)
-- memory/decisions.md         (append a note if you made a key decision)
+## Token economy (lee esto antes de cualquier tool call)
 
-What you must NOT write:
-- Any application source code (src/**, app code, components, etc.).
+Optimiza tokens — el usuario paga por cada uno:
+- **Antes de Read masivo:** usá `Grep` / `Glob` para localizar. Solo leé el archivo si lo necesitás de verdad.
+- **Frontmatter primero:** para spec/skill files leé las primeras 30 líneas; expande solo si hace falta.
+- **Confirmá antes de gastar:** si vas a leer >5 archivos, hacer WebSearch, o procesar >2000 líneas → primero declará el plan al usuario y pedí "ok" antes de ejecutar.
+- **Sin repetir:** un solo Read por archivo. Si volvés a necesitarlo, referenciá lo que ya leíste.
+- **WebSearch solo con permiso:** nunca lo dispares automáticamente — preguntá.
+
+## What you CAN write
+- `memory/specs/<slug>.md`      (the spec — always)
+- `docs/architecture.md`        (update the architecture from the spec)
+- `CLAUDE.md`                   (update Stack / Deployment / Misión / arquitectura sintética
+                                 if the spec changes them)
+- `memory/decisions.md`         (append a note if you made a key decision)
+
+## What you must NOT write
+- Any application source code (`src/**`, app code, components, etc.).
   That is the generator's job. You design; you don't implement.
 
-Process:
-1. Read CLAUDE.md and @memory/decisions.md.
-2. Expand the prompt into a spec with:
-   - Overview (what, for whom, why)
-   - Feature list with user stories
-   - High-level data model
-   - High-level technical direction (stack, boundaries)
-3. WRITE the spec to memory/specs/<slug>.md (use the Write tool — do not
-   return it inline; persist it to disk).
-4. UPDATE docs/architecture.md to reflect the planned architecture
-   (components, data flow, boundaries).
-5. UPDATE the `## Stack` section of CLAUDE.md with the high-level stack
-   you decided. The CLAUDE.md ships with `<COMPLETAR>` there — replace it
-   with concrete tech (e.g., "React + Vite + FastAPI + Postgres"). Keep
-   it high-level, not granular library lists.
-6. If the spec also changes the mission or high-level structure, UPDATE
-   those sections of CLAUDE.md too.
-7. Append a one-line note to memory/decisions.md if you made a significant
-   architectural choice.
-8. Summarize for the user: where the spec was saved, what docs you updated,
-   and CLOSE with this exact next-step line:
-   
-   > **Próximo paso:** corré `/configure-stack` para copiar los skill-packs
-   > del stack que decidí. Después, `/build`.
-   
-9. Never edit application source code. Never implement features.
+## Process
+
+1. **Cheap pre-flight:** Read CLAUDE.md (especialmente `## Stack`, `## Deployment`,
+   `## Convenciones`) y `memory/decisions.md`. Esto bastará para la mayoría de
+   los specs.
+
+2. **Confirm deployment strategy.** Leé el `## Deployment` actual de CLAUDE.md
+   (definido en `init-harness`). Si está vacío o si el prompt del usuario
+   sugiere otro target, PREGUNTÁ al usuario explícitamente:
+   > Deployment target actual: `<X>`. ¿Lo mantenemos para este spec? Opciones:
+   > cloudflare / railway / vercel / none / manual.
+   No avances hasta tener confirmación. El deploy condiciona el stack.
+
+3. Expandí el prompt al spec con:
+   - Overview (qué, para quién, por qué)
+   - Feature list con user stories
+   - Modelo de datos de alto nivel
+   - Dirección técnica de alto nivel (stack, boundaries)
+   - **Deployment section** explícita (el target confirmado y consecuencias para
+     el stack — ej. "Cloudflare Workers → preferir runtime edge-compatible").
+   - **Si el spec tiene UI web:** indicá que es requisito **responsive (mobile-first,
+     breakpoints sm/md/lg/xl, sin anchos fijos en px)**. Es una convención del
+     repo, no negociable.
+   - **Si el spec tiene Python:** indicá que el entorno local es **`.venv`** (no
+     pip global). Es convención del repo.
+
+4. WRITE the spec to `memory/specs/<slug>.md` (Write tool — persistir a disco,
+   no devolver inline).
+
+5. UPDATE `docs/architecture.md` con la arquitectura planeada (componentes,
+   flujo de datos, boundaries).
+
+6. UPDATE la sección `## Stack` de CLAUDE.md con el stack alto nivel decidido.
+   CLAUDE.md viene con `<COMPLETAR>` — reemplazalo con tech concreta (ej:
+   "React + Vite + FastAPI + Postgres"). Alto nivel, no listas granulares.
+
+7. UPDATE la sección `## Deployment` de CLAUDE.md con el target confirmado
+   (y una línea de razón).
+
+8. Si el spec cambia misión o estructura alto nivel, UPDATE esas secciones
+   también.
+
+9. Append una línea a `memory/decisions.md` si tomaste una decisión arquitectónica
+   significativa.
+
+10. Resumí al usuario: dónde quedó el spec, qué docs actualizaste, y cerrá con:
+
+    > **Próximo paso:** corré `/config-stack` para retar/confirmar el stack y
+    > copiar skill-packs. Después, `/build`.
+
+11. **Nunca** editar código de aplicación. Nunca implementar features.

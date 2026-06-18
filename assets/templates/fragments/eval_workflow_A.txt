@@ -1,2 +1,2 @@
-4. `/ship`             → verificación + commit convencional
-   (Evaluator no instalado — arquitectura MVP. Agrega Nivel B cuando una tarea lo amerite.)
+4. `/ship`             → verification gate → tests → commit → deploy según target
+   (Evaluator no instalado — arquitectura MVP. Agregá Nivel B cuando una tarea lo amerite.)
