@@ -64,17 +64,76 @@ Para cada tag, en este orden:
 
 Si la librería del bundle está vacía y nada matchea global: avisa que arranca sin packs específicos, los 3 universales bastan para empezar.
 
-### 5. Idempotencia
-Si un `.claude/skills/<nombre>/SKILL.md` ya existe, NO sobreescribir. Reportá `(ya existía, OK)`.
+### 5. Declarar MCPs en `.mcp.json`
 
-### 6. Reporte final
+Leé `.mcp.json` (debería existir vacío: `{"mcpServers": {}}`). Tu trabajo es proponer al usuario qué MCPs declarar según:
+- **Deploy target** (de la sección `## Deployment` de CLAUDE.md): `cloudflare` / `railway` / `vercel` / `none`
+- **Stack confirmado**: si menciona postgres/supabase, sugerí el MCP correspondiente
+- **Git inicializado**: si `.git/` existe, sugerí MCP de GitHub
+
+Presenta una lista con check `[x]` (recomendado) o `[ ]` (opcional). Ejemplo:
+
+```
+MCPs sugeridos según tu setup (deploy=cloudflare, stack=react+postgres, git=yes):
+  [x] cloudflare-bindings   (deploy target)
+  [x] postgres              (DB del stack)
+  [ ] github                (opcional — para crear PRs/issues desde Claude)
+
+Confirmá con "ok" o ajustá: "+github" / "-postgres".
+```
+
+**No avances hasta tener confirmación del usuario.** Una vez confirmado, modificá `.mcp.json` (preservando entradas existentes). Snippets canónicos:
+
+```json
+"cloudflare-bindings": {
+  "command": "npx",
+  "args": ["-y", "mcp-remote", "https://bindings.mcp.cloudflare.com/sse"]
+}
+```
+```json
+"railway": {
+  "command": "npx",
+  "args": ["-y", "mcp-remote", "https://mcp.railway.com"]
+}
+```
+```json
+"vercel": {
+  "command": "npx",
+  "args": ["-y", "mcp-remote", "https://mcp.vercel.com"]
+}
+```
+```json
+"github": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}" }
+}
+```
+```json
+"postgres": {
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-postgres"],
+  "env": { "DATABASE_URL": "${DATABASE_URL}" }
+}
+```
+
+Si un MCP usa env vars (`GITHUB_TOKEN`, `DATABASE_URL`), recordá al usuario agregarlas a `.env`.
+
+### 6. Idempotencia
+- `.claude/skills/<nombre>/SKILL.md` ya existe → NO sobreescribir. Reportá `(ya existía, OK)`.
+- Entrada MCP ya existe en `.mcp.json` → preservar la existente, no duplicar.
+
+### 7. Reporte final
 
 ```
 Stack confirmado: <X>
-Deploy target:    <cloudflare|railway|vercel|none|manual>
+Deploy target:    <cloudflare|railway|vercel|none>
 Packs aplicados:
   ✓ react-component-pattern   (desde bundle)
   ⚠ tailwind-design            (missing — skipped, anotado en decisions.md)
+MCPs declarados en .mcp.json:
+  ✓ cloudflare-bindings
+  ✓ postgres                  (recordá poblar DATABASE_URL en .env)
 
 Estado actual de .claude/skills/:
   <output de `ls .claude/skills/`>

@@ -1,11 +1,27 @@
 # MANIFEST — Harness Bundle
 
-**Bundle version:** `1g`
-**Generado:** 2026-06-17
+**Bundle version:** `1h`
+**Generado:** 2026-06-18
 
 La shell (`init-harness.sh`) contiene la LÓGICA. Los `assets/` contienen el CONTENIDO estático.
 Editar un asset no requiere tocar la shell. Tras editar, actualiza su checksum con:
 `shasum -a 256 <archivo> | cut -c1-12`
+
+## Cambios v1g → v1h
+
+### Init shell
+- **Fix `ask_choice`**: el default ya no se duplica en la lista de opciones (bug que mostraba "1) B / 2) A / 3) B" en arquitectura y "6) manual" extra en deploy target). El default ahora se resuelve por *exact match* contra las opciones reales.
+- **`PROJECT_TYPE` colapsado** a 2 opciones: `Estándar` / `Regulado (compliance)`. Las anteriores `Personal` y `Cliente enterprise (estándar)` eran funcionalmente idénticas — se unificaron en `Estándar`. La rama de compliance (fragment + denies extra) se mantiene en `Regulado`.
+- **`DEPLOY_TARGET`**: eliminada opción `manual`. Quedan 4: `none` / `cloudflare` / `railway` / `vercel`.
+- **MCPs movidos a `/config-stack`**: el init ya NO pregunta por `MCP_GITHUB` ni `MCP_POSTGRES`, ni declara los MCPs de deploy. El `.mcp.json` se crea vacío y `/config-stack` lo popula tras confirmar el stack. Esto desacopla la decisión MCP del bootstrap y la alinea con el stack/deploy realmente elegido.
+- **Hooks**: los defaults (`on-stop`, `pre-bash`, `user-prompt-validator`) se instalan automáticamente sin preguntar. Solo se preguntan los no-default (`post-edit-format`, `session-start`, `subagent-stop`). En modo no-interactivo siguen respetando `HARNESS_HOOK_*` env vars.
+- Env vars eliminadas: `HARNESS_MCP_GITHUB`, `HARNESS_MCP_POSTGRES`.
+
+### Commands
+- **`/config-stack`**: nuevo paso 5 "Declarar MCPs en `.mcp.json`". Sugiere MCPs según deploy target + stack + presencia de `.git/`, presenta lista con checkboxes recomendados/opcionales, espera confirmación, modifica `.mcp.json` preservando entradas existentes. Snippets canónicos para `cloudflare-bindings`, `railway`, `vercel`, `github`, `postgres`. Recuerda al usuario poblar env vars en `.env` cuando aplique.
+
+### Templates
+- **`CLAUDE.md.tmpl`**: sección `## Deployment` ahora aclara que `/config-stack` declara el MCP (no el init). Sección `## Workflow de agentes` actualiza descripción de `/config-stack` para incluir el paso de MCPs.
 
 ## Cambios v1f → v1g
 
@@ -59,7 +75,7 @@ harness-bundle/
 ├── check-skills.sh       ← Pre/post-flight: auditoría de ~/.claude/
 ├── install-global.sh     ← Symlinks check-skills + init-harness en PATH
 ├── uninstall-global.sh   ← Revierte instalación global
-├── VERSION               ← versión del bundle (1g)
+├── VERSION               ← versión del bundle (1h)
 ├── MANIFEST.md           ← este archivo
 ├── CLAUDE.md             ← reglas de trabajo sobre este repo
 ├── USER_GUIDE.md         ← guía paso a paso
@@ -78,18 +94,18 @@ harness-bundle/
 
 | Archivo | Tipo | Checksum (sha256, 12) |
 |---|---|---|
-| init-harness.sh | lógica | `18a10b50d016` |
+| init-harness.sh | lógica | `d2cdcb3483cf` |
 | check-skills.sh | lógica | `166998bb283f` |
 | install-global.sh | instalador | `626a481c99de` |
 | uninstall-global.sh | instalador | `ed19768a1bf1` |
-| VERSION | meta | `be191d20627f` |
+| VERSION | meta | `4cd7caa29ad5` |
 | tests/e2e-scaffold.sh | test | `c2100975ce7b` |
 | tests/e2e-claude.sh | test | `8ca0daec01bf` |
 | assets/agents/evaluator-light.md | agente | `a89d9af2db37` |
 | assets/agents/generator.md | agente | `7c76e287ae4a` |
 | assets/agents/planner.md | agente | `c104e4886529` |
 | assets/commands/build.md | command | `f684df3a8ce4` |
-| assets/commands/config-stack.md | command | `722329a9e6eb` |
+| assets/commands/config-stack.md | command | `20ef5dd20891` |
 | assets/commands/evaluate.md | command | `d5c664b537aa` |
 | assets/commands/plan.md | command | `8adfef7af077` |
 | assets/commands/ship.md | command | `24905b0e39b9` |
@@ -103,7 +119,7 @@ harness-bundle/
 | assets/skills/systematic-debugging/SKILL.md | skill | `d85aaea15f86` |
 | assets/skills/test-driven-development/SKILL.md | skill | `375b8b3556ab` |
 | assets/skills/verification-before-completion/SKILL.md | skill | `7e8c7cd39999` |
-| assets/templates/CLAUDE.md.tmpl | template | `eef38d91ca80` |
+| assets/templates/CLAUDE.md.tmpl | template | `9a2be7be622e` |
 | assets/templates/HARNESS.md.tmpl | template | `2f2ade8e774e` |
 | assets/templates/adr-template.md.tmpl | template | `67f733003f15` |
 | assets/templates/architecture.md.tmpl | template | `59ced5d04fff` |

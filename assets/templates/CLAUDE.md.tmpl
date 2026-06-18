@@ -14,8 +14,8 @@ los modelos actuales manejan tareas largas nativamente.
 ## Deployment
 **Target:** `{{DEPLOY_TARGET}}`
 
-Si el target es `cloudflare`, `railway` o `vercel`, el MCP correspondiente ya está declarado en `.mcp.json`.
-Si es `none` o `manual`, el deploy lo decide el usuario más adelante.
+Si el target es `cloudflare`, `railway` o `vercel`, `/config-stack` declara el MCP correspondiente en `.mcp.json` tras confirmar el stack.
+Si es `none`, el deploy lo decide el usuario más adelante.
 `/plan` debe re-confirmar este target al inicio de cada spec, y `/ship` lo respeta en su paso de deploy.
 
 ## Arquitectura sintética
@@ -24,7 +24,7 @@ Si es `none` o `manual`, el deploy lo decide el usuario más adelante.
 
 ## Workflow de agentes
 1. `/plan <objetivo>`    → planner expande a spec en `memory/specs/`, decide stack alto nivel, confirma deploy target, actualiza CLAUDE.md + `docs/architecture.md`
-2. `/config-stack`       → reta y confirma el stack con el usuario (tabla comparativa), copia skill-packs aplicables a `.claude/skills/`
+2. `/config-stack`       → reta y confirma el stack, copia skill-packs a `.claude/skills/`, declara MCPs en `.mcp.json` según deploy+stack+git
 3. `/build`              → generator implementa el spec + resuelve `memory/backlog.md`
 {{EVAL_WORKFLOW}}
 
