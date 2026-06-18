@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>harness-bundle — Building a Harness for Claude Code</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --bg-card: #11161d;
+    --bg-code: #1a2028;
+    --border: #1f2937;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #39d353;
+    --accent-dim: #2ea043;
+    --blue: #58a6ff;
+    --red: #f85149;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .deck { position: relative; height: 100vh; width: 100vw; }
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 5vh 8vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 350ms ease;
+    overflow-y: auto;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  .eyebrow {
+    font-size: 0.85rem;
+    color: var(--accent);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+  h1 {
+    font-size: clamp(2.5rem, 5.5vw, 4.5rem);
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 2rem;
+    letter-spacing: -0.01em;
+  }
+  h1 .accent, h2 .accent { color: var(--accent); }
+
+  p, li { font-size: clamp(1rem, 1.6vw, 1.3rem); line-height: 1.6; color: var(--text); }
+  .muted { color: var(--muted); }
+  .lede {
+    font-size: clamp(1.15rem, 1.9vw, 1.5rem);
+    color: var(--muted);
+    max-width: 60ch;
+    line-height: 1.5;
+  }
+
+  ul { list-style: none; padding: 0; }
+  ul.bullets li {
+    padding: 0.7rem 0 0.7rem 2rem;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  ul.bullets li:last-child { border-bottom: none; }
+  ul.bullets li::before {
+    content: "▸";
+    position: absolute;
+    left: 0.5rem;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+  }
+  .card h3 {
+    color: var(--accent);
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .card p, .card li { font-size: 1rem; line-height: 1.5; }
+
+  pre, code {
+    font-family: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
+    font-size: 0.95rem;
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  code.inline {
+    background: var(--bg-code);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: var(--accent);
+  }
+  pre .g { color: var(--accent); }
+  pre .b { color: var(--blue); }
+  pre .m { color: var(--muted); }
+  pre .r { color: var(--red); }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  th, td { text-align: left; padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--accent); font-weight: 600; font-size: 0.95rem; letter-spacing: 0.05em; text-transform: uppercase; }
+  td { font-size: 1rem; }
+  td.lvl { color: var(--accent); font-weight: 700; font-family: "SF Mono", monospace; }
+
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: var(--bg-code);
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-family: "SF Mono", monospace;
+    margin-right: 0.5rem;
+  }
+
+  .flow {
+    font-family: "SF Mono", monospace;
+    font-size: clamp(0.85rem, 1.3vw, 1.05rem);
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    white-space: pre;
+    line-height: 1.6;
+    color: var(--text);
+    overflow-x: auto;
+  }
+  .flow .g { color: var(--accent); }
+  .flow .m { color: var(--muted); }
+
+  /* HUD */
+  .hud {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    color: var(--muted);
+    font-family: "SF Mono", monospace;
+    font-size: 0.8rem;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .hud .dots { display: flex; gap: 0.5rem; pointer-events: auto; }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: background 200ms;
+  }
+  .dot.active { background: var(--accent); }
+  .dot:hover { background: var(--accent-dim); }
+  .nav-hint { opacity: 0.6; }
+
+  /* Title slide */
+  .title-slide {
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .title-slide .eyebrow { margin-bottom: 1rem; }
+  .author {
+    margin-top: 3rem;
+    color: var(--muted);
+    font-family: "SF Mono", monospace;
+    font-size: 0.95rem;
+  }
+  .author .accent { color: var(--accent); }
+
+  .ascii-frame {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .quote {
+    border-left: 3px solid var(--accent);
+    padding: 0.5rem 0 0.5rem 1.5rem;
+    color: var(--text);
+    font-style: italic;
+    font-size: clamp(1.15rem, 1.9vw, 1.4rem);
+    line-height: 1.5;
+    max-width: 65ch;
+  }
+  .quote-cite { color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem; font-style: normal; }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 1: TITLE -->
+  <section class="slide title-slide active">
+    <div class="eyebrow">harness engineering · claude code</div>
+    <h1>harness-bundle<br><span class="accent">building a harness</span> that matches the model</h1>
+    <p class="lede">A shell scaffolder that bootstraps a Planner · Generator · Evaluator harness on top of Claude Code. Optimized for Opus 4.5+ — simpler by design.</p>
+    <div class="author">
+      <span class="accent">▸</span> v1h · 2026 · based on Anthropic Labs harness research
+    </div>
+  </section>
+
+  <!-- 2: PRIMER — WHAT IS HARNESS ENGINEERING? -->
+  <section class="slide">
+    <div class="eyebrow">01 · primer</div>
+    <h2>What is <span class="accent">harness engineering</span>?</h2>
+    <div class="grid-2" style="align-items: start;">
+      <div>
+        <p class="lede" style="margin-bottom: 1.5rem;">The architecture you place <em>around</em> a model — prompts, tools, permissions, hooks, memory, agents — so it can do meaningful, long-running, autonomous work.</p>
+        <p class="muted" style="font-size: 1.05rem; line-height: 1.6;">A prompt asks the model a question. A <strong style="color: var(--text);">harness</strong> turns the model into a system: one that can read your repo, run your tests, follow your conventions, hand off to specialized agents, and ship work over hours — not a single turn.</p>
+        <div class="quote" style="margin-top: 1.5rem; font-size: 1.05rem;">
+          Without a harness: a chatbot. With a harness: an autonomous coding agent.
+        </div>
+      </div>
+      <div class="card">
+        <h3>The 6 layers</h3>
+        <div class="flow" style="padding: 1rem; background: transparent; border: none; font-size: 0.95rem;"><span class="m">┌────────────────────────────┐</span>
+<span class="m">│</span> 6. <span class="g">Evaluation</span>              <span class="m">│</span>  ← conditional
+<span class="m">├────────────────────────────┤</span>
+<span class="m">│</span> 5. <span class="g">Guardrails</span>              <span class="m">│</span>  hooks + permissions
+<span class="m">├────────────────────────────┤</span>
+<span class="m">│</span> 4. <span class="g">Capabilities</span>            <span class="m">│</span>  MCPs + skills
+<span class="m">├────────────────────────────┤</span>
+<span class="m">│</span> 3. <span class="g">Agents</span>                  <span class="m">│</span>  planner/gen/eval
+<span class="m">├────────────────────────────┤</span>
+<span class="m">│</span> 2. <span class="g">Context</span>                 <span class="m">│</span>  CLAUDE.md + memory
+<span class="m">├────────────────────────────┤</span>
+<span class="m">│</span> 1. <span class="g">Foundation</span>              <span class="m">│</span>  repo structure
+<span class="m">└────────────────────────────┘</span></div>
+        <p class="muted" style="margin-top: 1rem; font-size: 0.95rem;">Each layer encodes an assumption about what the model can't do alone — and those assumptions expire as models improve.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: THE PROBLEM -->
+  <section class="slide">
+    <div class="eyebrow">02 · the problem</div>
+    <h2>50+ skills, no harness, <span class="accent">no strategy</span></h2>
+    <div class="grid-2" style="margin-top: 1.5rem;">
+      <div>
+        <p class="lede" style="margin-bottom: 1.5rem;">Most setups accumulate community plugins and skills until everything competes for the model's attention.</p>
+        <ul class="bullets">
+          <li><strong>~50 auto-triggering skills</strong> — fire whether you want them or not</li>
+          <li><strong>Plugin overlap</strong> — multiple tools claim the same job</li>
+          <li><strong>No CLAUDE.md contract</strong> — model reads ambient policy instead of project policy</li>
+          <li><strong>Same setup for every model</strong> — scaffolding that helped Sonnet 4 now hurts Opus 4.5+</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>The hidden cost</h3>
+        <p style="margin-bottom: 1rem;">Each component of a harness encodes an assumption about what the model <em>can't</em> do alone.</p>
+        <p class="muted">Those assumptions expire as models improve. A harness that doesn't evolve becomes a harness that fights the model.</p>
+        <div class="quote" style="margin-top: 1.25rem;">
+          More scaffolding ≠ more capability.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4: THE INSIGHT -->
+  <section class="slide">
+    <div class="eyebrow">03 · the insight</div>
+    <h2>Re-examine the harness <span class="accent">with every new model</span></h2>
+    <div class="quote" style="margin-bottom: 1.5rem;">
+      "Each harness component codifies an assumption about what the model can't do solo. Those assumptions expire as models improve."
+      <div class="quote-cite">— Anthropic Labs, <em>Harness design for long-running application development</em></div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Sonnet 4.5</h3>
+        <p>Needed context resets + sprint decomposition. Model suffered "context anxiety".</p>
+      </div>
+      <div class="card">
+        <h3>Opus 4.5</h3>
+        <p>Context resets removed. Model handles long tasks natively.</p>
+      </div>
+      <div class="card">
+        <h3>Opus 4.6+</h3>
+        <p>Sprints removed. Evaluator becomes <em>conditional</em>, not default.</p>
+      </div>
+    </div>
+    <div class="quote" style="margin-top: 2rem; border-left-color: var(--blue);">
+      "Claude Opus is our most capable model — built for complex coding, agents, and tasks that require deep, multi-step reasoning."
+      <div class="quote-cite">— Anthropic, on Claude Opus for Claude Code &nbsp;·&nbsp; <span style="color: var(--accent);">recommended target: Opus 4.5+</span></div>
+    </div>
+  </section>
+
+  <!-- 4: THE SOLUTION -->
+  <section class="slide">
+    <div class="eyebrow">04 · the solution</div>
+    <h2>Planner · Generator · Evaluator <span class="accent">— minimal, graduated</span></h2>
+    <div class="grid-2" style="align-items: start;">
+      <div>
+        <div class="card" style="margin-bottom: 0.85rem; padding: 1rem 1.25rem;">
+          <h3 style="margin-bottom: 0.5rem;">Planner</h3>
+          <p style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 0.4rem;"><strong style="color: var(--accent);">Goal:</strong> expand a 1-4 sentence prompt into a rich, ambitious spec.</p>
+          <p style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 0.4rem;"><strong style="color: var(--accent);">Limits:</strong> never writes source code; high-level only — over-specifying tech details propagates errors downstream.</p>
+          <p style="font-size: 0.95rem; line-height: 1.5;"><strong style="color: var(--accent);">Output:</strong> <code class="inline">memory/specs/&lt;slug&gt;.md</code> + updates to <code class="inline">CLAUDE.md</code> &amp; <code class="inline">docs/architecture.md</code>.</p>
+        </div>
+        <div class="card" style="margin-bottom: 0.85rem; padding: 1rem 1.25rem;">
+          <h3 style="margin-bottom: 0.5rem;">Generator</h3>
+          <p style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 0.4rem;"><strong style="color: var(--accent);">Goal:</strong> implement the spec feature by feature; resolve open items in <code class="inline">memory/backlog.md</code>.</p>
+          <p style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 0.4rem;"><strong style="color: var(--accent);">Limits:</strong> one feature at a time; self-evaluates before declaring done (tests + verification skill); no new deps without justification.</p>
+          <p style="font-size: 0.95rem; line-height: 1.5;"><strong style="color: var(--accent);">Output:</strong> code + conventional commits + honest updates to <code class="inline">architecture.md</code> when structure diverges.</p>
+        </div>
+        <div class="card" style="padding: 1rem 1.25rem;">
+          <h3 style="margin-bottom: 0.5rem;">Evaluator <span class="muted" style="font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.85rem;">(conditional — Level B / C)</span></h3>
+          <p style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 0.4rem;"><strong style="color: var(--accent);">Goal:</strong> skeptical QA — find what's broken, missing, or "looks fine but isn't".</p>
+          <p style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 0.4rem;"><strong style="color: var(--accent);">Limits:</strong> never rubber-stamps; hard thresholds per criterion. <strong>B</strong> = code/tests review (no browser). <strong>C</strong> = Playwright, browser-driven.</p>
+          <p style="font-size: 0.95rem; line-height: 1.5;"><strong style="color: var(--accent);">Output:</strong> P0/P1/P2 findings appended to <code class="inline">memory/backlog.md</code> + report in <code class="inline">memory/evaluations/</code>.</p>
+        </div>
+      </div>
+      <div>
+        <table>
+          <thead>
+            <tr><th>Level</th><th>Agents</th><th>When</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="lvl">A</td><td>Planner + Generator</td><td>Daily work</td></tr>
+            <tr><td class="lvl">B</td><td>+ Light evaluator (no browser)</td><td>Logic, edge cases</td></tr>
+            <tr><td class="lvl">C</td><td>+ Playwright evaluator</td><td>UI deliverables</td></tr>
+          </tbody>
+        </table>
+        <p class="muted" style="margin-top: 1.5rem; font-size: 1rem;">Rule of thumb: stay at A as long as you can. Move up only when a real task proves the current level isn't enough.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5: THE IMPLEMENTATION -->
+  <section class="slide">
+    <div class="eyebrow">05 · the implementation</div>
+    <h2>What <code class="inline">harness-bundle</code> ships</h2>
+    <div class="grid-2" style="align-items: start;">
+      <div>
+        <ul class="bullets">
+          <li><code class="inline">init-harness.sh</code> — interactive bootstrap, idempotent, no external runtime</li>
+          <li><code class="inline">check-skills.sh</code> — audits <code class="inline">~/.claude/</code> before & after</li>
+          <li><strong>3 agents</strong>: planner, generator, evaluator-light</li>
+          <li><strong>5 slash commands</strong>: <code class="inline">/plan /config-stack /build /evaluate /ship</code></li>
+          <li><strong>3 universal skills</strong>: TDD, systematic-debugging, verification</li>
+          <li><strong>6 hooks</strong>: secret filter, bash guards, session summary, ...</li>
+          <li><strong>Decoupled</strong>: shell assembles, <code class="inline">assets/</code> holds content</li>
+        </ul>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom: 1rem;">
+          <h3>End-to-end flow</h3>
+          <pre><span class="g">/plan</span> → <span class="g">/config-stack</span> → <span class="g">/build</span>
+                       ↓
+                  <span class="g">/evaluate</span>  <span class="m">(optional)</span>
+                       ↓
+                    <span class="g">/ship</span></pre>
+        </div>
+        <div class="card">
+          <h3>Stack constraints</h3>
+          <p><span class="badge">bash 3.2</span> <span class="badge">POSIX</span> <span class="badge">no jq</span></p>
+          <p class="muted" style="margin-top: 0.75rem; font-size: 0.95rem;">Runs on macOS default shell. No Node, no Python, no external deps.</p>
+        </div>
+      </div>
+    </div>
+    <div class="ascii-frame" style="margin-top: 2rem;">
+      <p style="font-family: 'SF Mono', monospace; font-size: 1rem;"><span class="accent">▸</span> github.com/cabobadilla/harness-bundle &nbsp;·&nbsp; <span class="muted">README.md · USER_GUIDE.md · harness_strategy.md</span></p>
+    </div>
+  </section>
+
+</div>
+
+<div class="hud">
+  <span class="nav-hint">← → arrows / space · click dots</span>
+  <div class="dots" id="dots"></div>
+  <span id="counter">1 / 6</span>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsContainer = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  let current = 0;
+
+  slides.forEach((_, i) => {
+    const dot = document.createElement('span');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.addEventListener('click', () => go(i));
+    dotsContainer.appendChild(dot);
+  });
+  const dots = document.querySelectorAll('.dot');
+
+  function go(n) {
+    if (n < 0 || n >= slides.length) return;
+    slides[current].classList.remove('active');
+    dots[current].classList.remove('active');
+    current = n;
+    slides[current].classList.add('active');
+    dots[current].classList.add('active');
+    counter.textContent = `${current + 1} / ${slides.length}`;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(current - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.dot') || e.target.closest('a')) return;
+    const x = e.clientX;
+    const w = window.innerWidth;
+    if (x > w * 0.6) go(current + 1);
+    else if (x < w * 0.4) go(current - 1);
+  });
+</script>
+</body>
+</html>
