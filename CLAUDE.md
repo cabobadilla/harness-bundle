@@ -58,15 +58,33 @@ Decoupling regla: la shell ensambla; los assets son contenido. Si un cambio toca
 - No tocar `~/.claude/` desde este script automáticamente. La limpieza de skills/plugins globales se hace con un script aparte y siempre confirmando con el usuario.
 
 ## Backlog del bundle
-Trabajo pendiente sobre el scaffolder mismo (no sobre proyectos que genera):
+Trabajo pendiente sobre el scaffolder mismo (no sobre proyectos que genera).
+Auditoría vs `harness_strategy.md` realizada 2026-06-18. Prioridad: **P0** = crítico (gap conceptual del strategy), **P1** = alto (drift de docs, confunde al usuario), **P2** = medio (mejoras incrementales), **P3** = bajo (nice-to-have).
 
-- [ ] **Fase C — Evaluator completo (Playwright)**: completar el agente de verificación completa. Hoy el bundle entrega Nivel A (planner+generator) y Nivel B (evaluator ligero, sin browser). Falta el Nivel C: agente `evaluator-full.md` que use Playwright MCP para navegar la app generada como usuario real, con los 4 criterios + thresholds duros de §10 de `harness_strategy.md`. Incluye:
-  - `assets/agents/evaluator-full.md` (versión con `mcp__playwright__*` en tools)
-  - Declarar `playwright` en `.mcp.json` cuando el usuario elige Nivel C
-  - Nueva opción "C" en el menú de arquitectura del `init-harness.sh`
-  - Fragmentos `eval_workflow_C.txt`, `backlog_C.txt`
-  - Validación: bug intencional de UI en una app de prueba → el evaluator lo detecta y reporta con `file:line`
-- [ ] **`check-skills.sh`** — pre-flight de skills/plugins globales antes del bootstrap (Fase 3 del plan original).
+### P0 — Nivel C: Evaluator completo con Playwright
+Es la "Opción B del paper" según §10 del strategy. Hoy el bundle entrega A (planner+generator) y B-ligero (evaluator sin browser); el evaluator del paper navega la app con Playwright. Sub-tareas:
+- [ ] `assets/agents/evaluator-full.md` con `mcp__playwright__*` en `tools`
+- [ ] Opción `C` en el menú de arquitectura del `init-harness.sh`
+- [ ] Snippet `playwright` MCP en `/config-stack` (o auto-declaración en init si Nivel C)
+- [ ] Fragmentos `eval_workflow_C.txt`, `backlog_C.txt`, `eval_agent_line_C.txt`, `eval_cmd_line_C.txt`
+- [ ] Implementar los 4 criterios duros del §10.2: product depth / functionality / visual design / code quality
+- [ ] Validación: bug intencional de UI en una app de prueba → el evaluator lo detecta con `file:line`
+
+### P1 — Drift de documentación
+- [ ] `CLAUDE.md` (este archivo, líneas 23-25): la sección Arquitectura lista `assets/scaffolds/` (eliminado v2.2), `freeze-guard.sh` y commands `freeze/unfreeze` (eliminados v1g). Actualizar.
+- [ ] `assets/templates/HARNESS.md.tmpl` (línea 47): apunta a `AGENT_HARNESS_GUIDE_V2.md` que no existe — debería ser `harness_strategy.md`.
+- [ ] `USER_GUIDE.md` (línea 30): usa el nombre viejo `/configure-stack` en lugar de `/config-stack`. Header dice `v1f`, bundle hoy es v1h.
+- [ ] `harness_strategy.md` (líneas 5, 549, 618): "Bundle de referencia v1f" / "el bundle (v1e) entrega…" — drift de 2 versiones respecto al estado real.
+
+### P2 — Snippets MCP faltantes en `/config-stack`
+Según §8.2 del strategy deberían sugerirse también:
+- [ ] `filesystem` MCP (para paths fuera del repo)
+- [ ] `sqlite` MCP (hoy solo está `postgres`)
+- [ ] `playwright` MCP (cuando aterrice el Nivel C — ver P0)
+
+### P3 — Mejoras incrementales
+- [ ] Snippet/fragmento para el patrón "MCP read-only + backend local" del §14 (Anexo banca/regulado).
+- [ ] Aclarar referencia al skill `simplify` (línea 44 de este CLAUDE.md): si es un skill global del usuario, decirlo explícito; si debería estar en el bundle, portarlo a `assets/skills/`.
 
 ## Referencias persistentes
 - `@harness_strategy.md` — fuente de verdad de la arquitectura y filosofía del harness.
