@@ -58,6 +58,14 @@ Optimiza tokens — el usuario paga por cada uno:
    - **Si el spec tiene UI web:** indicá que es requisito **responsive (mobile-first,
      breakpoints sm/md/lg/xl, sin anchos fijos en px)**. Es una convención del
      repo, no negociable.
+     **Además, sugerí una `Aesthetic direction`** en el spec — una sola línea con la
+     dirección estética intencional para que el generator no caiga en defaults
+     genéricos. Elegí una sola: brutalist · editorial/magazine · soft/pastel ·
+     industrial/utilitarian · luxury/refined · playful/toy-like · retro-futuristic
+     · organic/natural · art deco/geometric · minimalist refined · maximalist chaos.
+     El generator aplicará el skill `frontend-design` (si fue copiado por
+     `/config-stack`) usando esa dirección como input. Evitá "moderno y limpio"
+     u otros descriptores vacíos.
    - **Si el spec tiene Python:** indicá que el entorno local es **`.venv`** (no
      pip global). Es convención del repo.
 

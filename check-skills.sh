@@ -73,7 +73,7 @@ legalzoom|DROP|uso único; el caso ya se resolvió con código propio
 superpowers|DROP|~50 skills auto-triggerables que contradicen el CLAUDE.md del harness
 commit-commands|DROP|/ship del harness cubre commit/push/PR
 github|DROP|usar MCP github en su lugar (mejor integración)
-frontend-design|DROP|hay skill built-in equivalente; el planner lo lee puntual
+frontend-design|DROP|la skill se vendoriza en assets/skill-packs/; el plugin global ya no es necesario
 playwright|KEEP|requerido por el evaluator Nivel B/C
 railway|KEEP|plataforma de deploy real
 cloudflare|KEEP|útil acotado; complementa skill cloudflare-deploy

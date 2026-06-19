@@ -438,7 +438,7 @@ Hay dos niveles de skills:
  
 **Si un pack solicitado no existe en ningún lado:** `/configure-stack` ofrece (a) skip y anotar en decisions.md, (b) crear stub vacío, (c) abortar para que el usuario lo cree y re-corra.
  
-La librería arranca **vacía a propósito**. Se llena cuando un caso real lo justifica (no por especulación).
+La librería arranca **mínima a propósito**. Hoy contiene un solo pack — `frontend-design` (vendorizado del plugin oficial de Anthropic, Apache-2.0) — que `/config-stack` copia automáticamente cuando el stack tiene UI. Se llena con más packs cuando un caso real lo justifica (no por especulación).
  
 ### 8.5 Wiring de skills (cómo se conectan a los agentes)
  
@@ -556,7 +556,7 @@ Adoptar este harness implica **quitar** los plugins de la comunidad que compiten
 | **superpowers** | ~50 skills auto-triggereables que contradicen tu CLAUDE.md. Portas 4-5 patrones al harness (ver abajo) y desinstalas. Es el de mayor ROI quitar. |
 | **commit-commands** | `commit`/`commit-push-pr` ya viven en tu `/ship`. `clean_gone` son 3 líneas de bash. |
 | **github** (plugin) | Tienes MCP de github (mejor integración). Redundante. |
-| **frontend-design** (plugin) | Hay un skill `frontend-design` built-in equivalente. Además el planner del paper lo lee como skill puntual, no necesita el plugin permanente. |
+| **frontend-design** (plugin) | La skill se **vendoriza** en `assets/skill-packs/frontend-design/` (Apache-2.0). `/config-stack` la copia automáticamente al `.claude/skills/` del proyecto cuando el stack tiene UI (react/vue/svelte/next/astro/tailwind/html/css). El plugin global ya no es necesario. |
  
 ### 12.2 Mantener
  
@@ -704,7 +704,7 @@ No usar plugins de comunidad automáticamente. Workflow definido solo por .claud
 | superpowers | Port→Drop | portar 4 patrones, desinstalar |
 | commit-commands | Drop | /ship cubre |
 | github (plugin) | Drop | usar MCP |
-| frontend-design (plugin) | Drop | built-in equivalente |
+| frontend-design (plugin) | Drop | skill vendorizada en bundle/skill-packs/ |
 | playwright | Keep | requerido por evaluator |
 | railway | Keep | plataforma deploy |
 | cloudflare | Keep | acotado |

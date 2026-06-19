@@ -1,11 +1,27 @@
 # MANIFEST — Harness Bundle
 
-**Bundle version:** `1h`
-**Generado:** 2026-06-18
+**Bundle version:** `1i`
+**Generado:** 2026-06-19
 
 La shell (`init-harness.sh`) contiene la LÓGICA. Los `assets/` contienen el CONTENIDO estático.
 Editar un asset no requiere tocar la shell. Tras editar, actualiza su checksum con:
 `shasum -a 256 <archivo> | cut -c1-12`
+
+## Cambios v1h → v1i
+
+### Skill-packs (nuevo)
+- **`assets/skill-packs/frontend-design/`** — primer pack vendorizado, del plugin oficial de Anthropic. Incluye `SKILL.md` (frontmatter extendido con `license:` y `source:`) y `LICENSE` (Apache-2.0). Guía decisiones de tipografía, color, motion, composición espacial — evita "AI slop".
+- `assets/skill-packs/README.md` actualizado: la librería ya no arranca vacía.
+
+### Commands
+- **`/config-stack`** paso **4.5 (nuevo)**: si los tags del stack incluyen `react|vue|svelte|next|nuxt|astro|solid|tailwind|html|css|ui`, copia automáticamente el pack `frontend-design` (con `SKILL.md` y `LICENSE`) a `.claude/skills/frontend-design/`.
+
+### Agentes
+- **`planner.md`**: cuando el spec tiene UI web, ahora también sugiere una `Aesthetic direction` intencional (brutalist / editorial / soft / etc.). Es input para que el generator aplique `frontend-design` con dirección concreta.
+
+### Strategy + audit
+- **`harness_strategy.md`** §8.4 y §12: el plugin `frontend-design` deja de ser "DROP por built-in equivalente" (no había built-in real). La skill ahora vive en el bundle. El plugin global queda obsoleto.
+- **`check-skills.sh`**: razón del DROP de `frontend-design` actualizada para reflejar la vendorización.
 
 ## Cambios v1g → v1h
 
@@ -75,7 +91,7 @@ harness-bundle/
 ├── check-skills.sh       ← Pre/post-flight: auditoría de ~/.claude/
 ├── install-global.sh     ← Symlinks check-skills + init-harness en PATH
 ├── uninstall-global.sh   ← Revierte instalación global
-├── VERSION               ← versión del bundle (1h)
+├── VERSION               ← versión del bundle (1i)
 ├── MANIFEST.md           ← este archivo
 ├── CLAUDE.md             ← reglas de trabajo sobre este repo
 ├── USER_GUIDE.md         ← guía paso a paso
@@ -95,17 +111,17 @@ harness-bundle/
 | Archivo | Tipo | Checksum (sha256, 12) |
 |---|---|---|
 | init-harness.sh | lógica | `d2cdcb3483cf` |
-| check-skills.sh | lógica | `166998bb283f` |
+| check-skills.sh | lógica | `cc0dfa83ada0` |
 | install-global.sh | instalador | `626a481c99de` |
 | uninstall-global.sh | instalador | `ed19768a1bf1` |
-| VERSION | meta | `4cd7caa29ad5` |
+| VERSION | meta | `64e3520c5ae3` |
 | tests/e2e-scaffold.sh | test | `c2100975ce7b` |
 | tests/e2e-claude.sh | test | `8ca0daec01bf` |
 | assets/agents/evaluator-light.md | agente | `a89d9af2db37` |
 | assets/agents/generator.md | agente | `7c76e287ae4a` |
-| assets/agents/planner.md | agente | `c104e4886529` |
+| assets/agents/planner.md | agente | `c5fc94477038` |
 | assets/commands/build.md | command | `f684df3a8ce4` |
-| assets/commands/config-stack.md | command | `20ef5dd20891` |
+| assets/commands/config-stack.md | command | `a70393e8493a` |
 | assets/commands/evaluate.md | command | `d5c664b537aa` |
 | assets/commands/plan.md | command | `8adfef7af077` |
 | assets/commands/ship.md | command | `24905b0e39b9` |
@@ -115,7 +131,9 @@ harness-bundle/
 | assets/hooks/post-edit-format.sh | hook | `5e9df629b2ac` |
 | assets/hooks/session-start.sh | hook | `8cd1424205af` |
 | assets/hooks/subagent-stop.sh | hook | `08ec5b911a68` |
-| assets/skill-packs/README.md | doc | `e52a3656dea1` |
+| assets/skill-packs/README.md | doc | `c8deaf560694` |
+| assets/skill-packs/frontend-design/SKILL.md | skill-pack | `4a1b4ce3ab73` |
+| assets/skill-packs/frontend-design/LICENSE | license | `cfc7749b96f6` |
 | assets/skills/systematic-debugging/SKILL.md | skill | `d85aaea15f86` |
 | assets/skills/test-driven-development/SKILL.md | skill | `375b8b3556ab` |
 | assets/skills/verification-before-completion/SKILL.md | skill | `7e8c7cd39999` |

@@ -64,6 +64,12 @@ Para cada tag, en este orden:
 
 Si la librería del bundle está vacía y nada matchea global: avisa que arranca sin packs específicos, los 3 universales bastan para empezar.
 
+**4.5. UI bundle — auto-incluido si el stack tiene frontend.**
+Si los tags incluyen cualquiera de `react`, `vue`, `svelte`, `next`, `nuxt`, `astro`, `solid`, `tailwind`, `html`, `css`, `ui`, copiá también el pack:
+- `frontend-design` desde `<bundle>/assets/skill-packs/frontend-design/` → `.claude/skills/frontend-design/` (incluí `SKILL.md` **y** `LICENSE` — es Apache-2.0).
+
+El pack guía decisiones de tipografía, color, motion y composición espacial para evitar diseño genérico ("AI slop"). El generator lo descubre dinámicamente y lo aplica cuando implementa componentes/páginas. Reportar como `✓ frontend-design (UI bundle, Apache-2.0)`.
+
 ### 5. Declarar MCPs en `.mcp.json`
 
 Leé `.mcp.json` (debería existir vacío: `{"mcpServers": {}}`). Tu trabajo es proponer al usuario qué MCPs declarar según:

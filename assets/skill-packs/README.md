@@ -1,8 +1,14 @@
-# Skill packs — librería del bundle (vacía al inicio)
+# Skill packs — librería del bundle
 
-Esta carpeta es la **fuente preferida** del comando `/configure-stack` para encontrar skills específicos del stack que el planner decidió.
+Esta carpeta es la **fuente preferida** del comando `/config-stack` para encontrar skills específicos del stack que el planner decidió.
 
-Arranca **vacía a propósito**. La carga es responsabilidad del que usa el bundle, cuando un caso real lo justifique.
+Hoy contiene:
+
+| Pack | Cuándo aplica | Origen / licencia |
+|---|---|---|
+| `frontend-design/` | Stack tiene UI (react, vue, svelte, next, astro, tailwind, html, css, ui) | Vendorizado del plugin oficial de Anthropic · Apache-2.0 |
+
+Más packs se agregan cuando un caso real lo justifique — no por especulación.
 
 ## Estructura esperada
 

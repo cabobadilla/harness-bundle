@@ -120,7 +120,7 @@ harness-bundle/
 ├── USER_GUIDE.md          # step-by-step end-to-end guide
 ├── harness_strategy.md    # SOURCE OF TRUTH (Anthropic strategy v2.2)
 ├── MANIFEST.md            # inventory + asset checksums
-├── VERSION                # bundle version (currently: 1h)
+├── VERSION                # bundle version (currently: 1i)
 ├── init-harness.sh        # scaffolder LOGIC
 ├── check-skills.sh        # ~/.claude/ audit
 ├── tests/                 # E2E (structural smoke + headless claude)
@@ -168,6 +168,6 @@ Non-negotiable conventions: conventional commits, `set -euo pipefail` stays in, 
 
 ## Current status
 
-- **Version:** v1h (see `VERSION`)
+- **Version:** v1i (see `VERSION`)
 - **Supported levels:** A (MVP) and B (light evaluator without browser)
 - **Pending:** Level C (evaluator + Playwright) and docs drift cleanup — see prioritized backlog in `CLAUDE.md`.
